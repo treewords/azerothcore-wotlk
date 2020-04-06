@@ -344,101 +344,6 @@ public:
     };
 };
 
-/*######
-## npc_salanar_the_horseman
-######*/
-
-enum SalanarTheHorseman
-{
-    GOSSIP_SALANAR_MENU               = 9739,
-    GOSSIP_SALANAR_OPTION             = 0,
-    SALANAR_SAY                       = 0,
-    QUEST_INTO_REALM_OF_SHADOWS       = 12687,
-    NPC_DARK_RIDER_OF_ACHERUS         = 28654,
-    NPC_SALANAR_IN_REALM_OF_SHADOWS   = 28788,
-    SPELL_EFFECT_STOLEN_HORSE         = 52263,
-    SPELL_DELIVER_STOLEN_HORSE        = 52264,
-    SPELL_CALL_DARK_RIDER             = 52266,
-    SPELL_EFFECT_OVERTAKE             = 52349,
-    SPELL_REALM_OF_SHADOWS            = 52693
-};
-
-class npc_salanar_the_horseman : public CreatureScript
-{
-public:
-    npc_salanar_the_horseman() : CreatureScript("npc_salanar_the_horseman") { }
-
-    struct npc_salanar_the_horsemanAI : public ScriptedAI
-    {
-        npc_salanar_the_horsemanAI(Creature* creature) : ScriptedAI(creature) { }
-
-        void sGossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
-        {
-            if (menuId == GOSSIP_SALANAR_MENU && gossipListId == GOSSIP_SALANAR_OPTION)
-            {
-                player->CastSpell(player, SPELL_REALM_OF_SHADOWS, true);
-                player->PlayerTalkClass->SendCloseGossip();
-            }
-        }
-
-        void SpellHit(Unit* caster, const SpellInfo* spell) override
-        {
-            if (spell->Id == SPELL_DELIVER_STOLEN_HORSE)
-            {
-                if (caster->GetTypeId() == TYPEID_UNIT && caster->IsVehicle())
-                {
-                    if (Unit* charmer = caster->GetCharmer())
-                    {
-                        if (charmer->HasAura(SPELL_EFFECT_STOLEN_HORSE))
-                        {
-                            charmer->RemoveAurasDueToSpell(SPELL_EFFECT_STOLEN_HORSE);
-                            caster->RemoveNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
-                            caster->setFaction(35);
-                            DoCast(caster, SPELL_CALL_DARK_RIDER, true);
-                            if (Creature* Dark_Rider = me->FindNearestCreature(NPC_DARK_RIDER_OF_ACHERUS, 15))
-                                ENSURE_AI(npc_dark_rider_of_acherus::npc_dark_rider_of_acherusAI, Dark_Rider->AI())->InitDespawnHorse(caster);
-                        }
-                    }
-                }
-            }
-        }
-
-        void MoveInLineOfSight(Unit* who) override
-        {
-            ScriptedAI::MoveInLineOfSight(who);
-
-            if (who->GetTypeId() == TYPEID_UNIT && who->IsVehicle() && me->IsWithinDistInMap(who, 5.0f))
-            {
-                if (Unit* charmer = who->GetCharmer())
-                {
-                    if (Player* player = charmer->ToPlayer())
-                    {
-                        // for quest Into the Realm of Shadows(QUEST_INTO_REALM_OF_SHADOWS)
-                        if (me->GetEntry() == NPC_SALANAR_IN_REALM_OF_SHADOWS && player->GetQuestStatus(QUEST_INTO_REALM_OF_SHADOWS) == QUEST_STATUS_INCOMPLETE)
-                        {
-                            player->GroupEventHappens(QUEST_INTO_REALM_OF_SHADOWS, me);
-                            Talk(SALANAR_SAY);
-                            charmer->RemoveAurasDueToSpell(SPELL_EFFECT_OVERTAKE);
-                            if (Creature* creature = who->ToCreature())
-                            {
-                                creature->DespawnOrUnsummon();
-                                //creature->Respawn(true);
-                            }
-                        }
-
-                        player->RemoveAurasDueToSpell(SPELL_REALM_OF_SHADOWS);
-                    }
-                }
-            }
-        }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_salanar_the_horsemanAI(creature);
-    }
-};
-
 enum GiftOfTheHarvester
 {
     NPC_GHOUL                   = 28845,
@@ -1251,7 +1156,6 @@ void AddSC_the_scarlet_enclave_c1()
     new npc_eye_of_acherus();
     new spell_q12641_death_comes_from_on_high_summon_ghouls();
     new npc_death_knight_initiate();
-    new npc_salanar_the_horseman();
     new spell_item_gift_of_the_harvester();
     new spell_q12698_the_gift_that_keeps_on_giving();
     new npc_scarlet_ghoul();
