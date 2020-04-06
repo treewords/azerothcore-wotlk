@@ -344,6 +344,86 @@ public:
     };
 };
 
+/*######
+## npc_salanar_the_horseman
+######*/
+
+enum Spells_Salanar
+{
+    SPELL_REALM_OF_SHADOWS            = 52693,
+    SPELL_EFFECT_STOLEN_HORSE         = 52263,
+    SPELL_DELIVER_STOLEN_HORSE        = 52264,
+    SPELL_CALL_DARK_RIDER             = 52266,
+    SPELL_EFFECT_OVERTAKE             = 52349
+};
+
+class npc_salanar_the_horseman : public CreatureScript
+{
+public:
+    npc_salanar_the_horseman() : CreatureScript("npc_salanar_the_horseman") { }
+
+    CreatureAI* GetAI(Creature* creature) const OVERRIDE
+    {
+        return new npc_salanar_the_horsemanAI(creature);
+    }
+
+    struct npc_salanar_the_horsemanAI : public ScriptedAI
+    {
+        npc_salanar_the_horsemanAI(Creature* creature) : ScriptedAI(creature) { }
+
+        void SpellHit(Unit* caster, const SpellInfo* spell) OVERRIDE
+        {
+            if (spell->Id == SPELL_DELIVER_STOLEN_HORSE)
+            {
+                if (caster->GetTypeId() == TypeID::TYPEID_UNIT && caster->IsVehicle())
+                {
+                    if (Unit* charmer = caster->GetCharmer())
+                    {
+                        if (charmer->HasAura(SPELL_EFFECT_STOLEN_HORSE))
+                        {
+                            charmer->RemoveAurasDueToSpell(SPELL_EFFECT_STOLEN_HORSE);
+                            caster->RemoveFlag(UNIT_FIELD_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
+                            caster->setFaction(35);
+                            DoCast(caster, SPELL_CALL_DARK_RIDER, true);
+                            if (Creature* Dark_Rider = me->FindNearestCreature(28654, 15))
+                                CAST_AI(npc_dark_rider_of_acherus::npc_dark_rider_of_acherusAI, Dark_Rider->AI())->InitDespawnHorse(caster);
+                        }
+                    }
+                }
+            }
+        }
+
+        void MoveInLineOfSight(Unit* who) OVERRIDE
+        {
+            ScriptedAI::MoveInLineOfSight(who);
+
+            if (who->GetTypeId() == TypeID::TYPEID_UNIT && who->IsVehicle() && me->IsWithinDistInMap(who, 5.0f))
+            {
+                if (Unit* charmer = who->GetCharmer())
+                {
+                    if (Player* player = charmer->ToPlayer())
+                    {
+                        // for quest Into the Realm of Shadows(12687)
+                        if (me->GetEntry() == 28788 && player->GetQuestStatus(12687) == QUEST_STATUS_INCOMPLETE)
+                        {
+                            player->GroupEventHappens(12687, me);
+                            charmer->RemoveAurasDueToSpell(SPELL_EFFECT_OVERTAKE);
+                            if (Creature* creature = who->ToCreature())
+                            {
+                                creature->DespawnOrUnsummon();
+                                //creature->Respawn(true);
+                            }
+                        }
+
+                        if (player->HasAura(SPELL_REALM_OF_SHADOWS))
+                            player->RemoveAurasDueToSpell(SPELL_REALM_OF_SHADOWS);
+                    }
+                }
+            }
+        }
+    };
+};
+
 enum GiftOfTheHarvester
 {
     NPC_GHOUL                   = 28845,
@@ -1156,6 +1236,7 @@ void AddSC_the_scarlet_enclave_c1()
     new npc_eye_of_acherus();
     new spell_q12641_death_comes_from_on_high_summon_ghouls();
     new npc_death_knight_initiate();
+    new npc_salanar_the_horseman();
     new spell_item_gift_of_the_harvester();
     new spell_q12698_the_gift_that_keeps_on_giving();
     new npc_scarlet_ghoul();
